@@ -19,15 +19,6 @@ shopping_platform/
 └── pom.xml                # 后端 Maven 配置
 ```
 
-以下目录不需要提交到 GitHub，克隆后会重新生成：
-
-```text
-target/
-frontend/node_modules/
-frontend/dist/
-data/
-uploads/
-```
 
 ## 环境要求
 
@@ -36,19 +27,6 @@ uploads/
 - npm
 - MySQL 8.x，可选；默认 H2 模式不需要安装 MySQL
 
-## 克隆项目
-
-```bash
-git clone <你的 GitHub 仓库地址>
-cd shopping_platform
-```
-
-示例：
-
-```bash
-git clone https://github.com/你的用户名/shopping_platform.git
-cd shopping_platform
-```
 
 ## 后端运行：默认 H2 模式
 
@@ -72,20 +50,6 @@ Linux/macOS：
 http://localhost:8080
 ```
 
-测试接口：
-
-```text
-GET http://localhost:8080/api/home
-```
-
-H2 控制台：
-
-```text
-http://localhost:8080/h2-console
-JDBC URL: jdbc:h2:file:./data/shopping-platform
-User: sa
-Password:
-```
 
 ## 前端运行
 
@@ -152,58 +116,4 @@ Linux/macOS：
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=mysql
 ```
 
-注意：`application-mysql.properties` 通常包含数据库密码，不建议提交到 GitHub。
 
-## 打包构建
-
-后端打包：
-
-Windows：
-
-```bash
-.\mvnw.cmd clean package -DskipTests
-```
-
-Linux/macOS：
-
-```bash
-./mvnw clean package -DskipTests
-```
-
-生成的 jar 文件位于：
-
-```text
-target/shopping_platform-0.0.1-SNAPSHOT.jar
-```
-
-前端打包：
-
-```bash
-cd frontend
-npm install
-npm run build
-```
-
-生成的静态文件位于：
-
-```text
-frontend/dist/
-```
-
-## 生产部署建议
-
-推荐部署结构：
-
-```text
-公网用户 -> Nginx:80/443 -> frontend/dist 静态文件
-                         -> /api 反向代理到 Spring Boot:8080
-```
-
-服务器上建议使用 MySQL profile，并通过 systemd 环境变量配置数据库账号和密码，不要把真实密码写入 GitHub 仓库。
-
-常用检查命令：
-
-```bash
-curl http://127.0.0.1:8080/api/home
-curl http://127.0.0.1/api/home
-```
