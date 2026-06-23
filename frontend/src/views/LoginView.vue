@@ -1,12 +1,19 @@
 <script setup>
-import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Lock, User, Shop } from '@element-plus/icons-vue'
 import { login } from '../api/auth'
+import { adminLogin } from '../api/admin'
+import { useAuthState } from '../stores/authState'
+import { useAdminState } from '../stores/adminState'
 
 const router = useRouter()
+const route = useRoute()
+const { setAuth, clearAuth } = useAuthState()
+const { setAdminAuth, clearAdminAuth } = useAdminState()
 const loading = ref(false)
+const loginMode = ref(route.query.mode === 'admin' ? 'admin' : 'user')
 
 const form = reactive({
   account: '',
@@ -15,7 +22,7 @@ const form = reactive({
 
 const rules = {
   account: [
-    { required: true, message: '请输入手机号或邮箱', trigger: 'blur' }
+    { required: true, message: '请输入账号', trigger: 'blur' }
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
@@ -24,21 +31,45 @@ const rules = {
 }
 
 const formRef = ref()
+const modeOptions = [
+  { label: '用户登录', value: 'user' },
+  { label: '管理员登录', value: 'admin' }
+]
+const title = computed(() => (loginMode.value === 'admin' ? '管理员登录' : '账号登录'))
+const subtitle = computed(() => (
+  loginMode.value === 'admin' ? '使用管理员账号进入后台' : '使用手机号、邮箱或用户名登录'
+))
+const accountPlaceholder = computed(() => (
+  loginMode.value === 'admin' ? '管理员账号 admin' : '手机号 / 邮箱 / 用户名'
+))
 
 async function submit() {
   await formRef.value.validate()
 
   loading.value = true
   try {
+    if (loginMode.value === 'admin') {
+      const result = await adminLogin({
+        username: form.account,
+        password: form.password
+      })
+
+      clearAuth()
+      setAdminAuth(result.token, result.admin || {})
+      ElMessage.success('管理员登录成功')
+      router.push(route.query.redirect || '/admin')
+      return
+    }
+
     const result = await login(form)
 
     if (result?.token) {
-      localStorage.setItem('token', result.token)
-      localStorage.setItem('user', JSON.stringify(result.user || {}))
+      clearAdminAuth()
+      setAuth(result.token, result.user || {})
     }
 
     ElMessage.success('登录成功')
-    router.push('/')
+    router.push(route.query.redirect || '/')
   } catch (error) {
     ElMessage.error(error.message || '登录失败')
   } finally {
@@ -56,15 +87,25 @@ async function submit() {
       </router-link>
 
       <div class="visual-copy">
-        <h1>欢迎回来</h1>
-        <p>登录后可继续查看购物车、订单和会员权益。</p>
+        <h1>{{ loginMode === 'admin' ? '后台管理' : '欢迎回来' }}</h1>
+        <p>{{ loginMode === 'admin' ? '查询用户、订单并处理发货。' : '登录后可继续查看购物车、订单和会员权益。' }}</p>
       </div>
     </section>
 
     <section class="auth-panel">
       <div class="auth-box">
-        <h2>账号登录</h2>
-        <p>使用手机号或邮箱登录</p>
+        <el-radio-group v-model="loginMode" class="login-mode">
+          <el-radio-button
+            v-for="option in modeOptions"
+            :key="option.value"
+            :label="option.value"
+          >
+            {{ option.label }}
+          </el-radio-button>
+        </el-radio-group>
+
+        <h2>{{ title }}</h2>
+        <p>{{ subtitle }}</p>
 
         <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
           <el-form-item label="账号" prop="account">
@@ -72,7 +113,7 @@ async function submit() {
                 v-model="form.account"
                 :prefix-icon="User"
                 size="large"
-                placeholder="手机号 / 邮箱"
+                :placeholder="accountPlaceholder"
             />
           </el-form-item>
 
@@ -99,9 +140,12 @@ async function submit() {
           </el-button>
         </el-form>
 
-        <div class="auth-switch">
+        <div v-if="loginMode === 'user'" class="auth-switch">
           <span>还没有账号？</span>
           <router-link to="/register">立即注册</router-link>
+        </div>
+        <div v-else class="admin-tip">
+          管理员账号由系统预设，不开放网页注册。
         </div>
       </div>
     </section>
@@ -167,6 +211,19 @@ async function submit() {
   font-size: 28px;
 }
 
+.login-mode {
+  width: 100%;
+  margin-bottom: 22px;
+}
+
+.login-mode :deep(.el-radio-button) {
+  flex: 1;
+}
+
+.login-mode :deep(.el-radio-button__inner) {
+  width: 100%;
+}
+
 .auth-box > p {
   margin: 8px 0 28px;
   color: #70817b;
@@ -189,6 +246,13 @@ async function submit() {
   color: #0f8f75;
   font-weight: 800;
   text-decoration: none;
+}
+
+.admin-tip {
+  margin-top: 22px;
+  color: #70817b;
+  font-size: 14px;
+  text-align: center;
 }
 
 @media (max-width: 760px) {

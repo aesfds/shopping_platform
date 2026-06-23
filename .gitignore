@@ -39,3 +39,11 @@ frontend/dist/
 ### Local database ###
 data/
 .m2/
+
+uploads/
+source/
+src/main/resources/application-mysql.properties
+.env
+.env.*
+
+
